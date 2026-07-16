@@ -1,14 +1,14 @@
-#include "gamecontext.h"
 #include "entities/character.h"
 #include "entities/chi_dot.h"
 #include "entities/chris_sprite.h"
+#include "gamecontext.h"
 #include "gamecontroller.h"
 #include "player.h"
 
-#include <base/system.h>
 #include <base/math.h>
-#include <engine/shared/linereader.h>
+#include <base/system.h>
 #include <engine/shared/config.h>
+#include <engine/shared/linereader.h>
 #include <engine/storage.h>
 #include <game/collision.h>
 #include <game/gamecore.h>
@@ -19,8 +19,7 @@
 #include <cmath>
 #include <iterator>
 
-namespace
-{
+namespace {
 constexpr int CHI_MAX_DOTS_TOTAL = 500;
 constexpr int CHI_MAX_DOTS_SERVER = 500;
 constexpr int CHI_MAX_DOTS_PER_CHAR = 108;
@@ -48,7 +47,15 @@ enum
 vec2 ClusterOffset(int Index)
 {
 	static const vec2 s_aOffsets[] = {
-		vec2(0, 0), vec2(7, -4), vec2(-7, 5), vec2(4, 8), vec2(-5, -7), vec2(10, 3), vec2(-10, -2), vec2(2, -11), vec2(-2, 11),
+		vec2(0, 0),
+		vec2(7, -4),
+		vec2(-7, 5),
+		vec2(4, 8),
+		vec2(-5, -7),
+		vec2(10, 3),
+		vec2(-10, -2),
+		vec2(2, -11),
+		vec2(-2, 11),
 	};
 	return s_aOffsets[Index % (int)std::size(s_aOffsets)];
 }
@@ -160,7 +167,7 @@ std::string AfterFirstToken(const std::string &Text)
 	return Text.substr(Begin);
 }
 
-int ChrisRand(int Seed, int Mod)
+[[maybe_unused]] int ChrisRand(int Seed, int Mod)
 {
 	if(Mod <= 0)
 		return 0;
@@ -186,13 +193,13 @@ bool ContainsAnyText(const std::string &Text, const char *const *ppNeedles, int 
 	return false;
 }
 
-bool ContainsChrisMention(const std::string &LowerText)
+[[maybe_unused]] bool ContainsChrisMention(const std::string &LowerText)
 {
 	const char *apNeedles[] = {"chris", "cris", "克里斯", "小克", "小精灵", "精灵"};
 	return ContainsAnyText(LowerText, apNeedles, (int)std::size(apNeedles));
 }
 
-std::string TruncateUtf8ForChat(const std::string &Text, size_t MaxBytes)
+[[maybe_unused]] std::string TruncateUtf8ForChat(const std::string &Text, size_t MaxBytes)
 {
 	if(Text.size() <= MaxBytes)
 		return Text;
@@ -205,7 +212,7 @@ std::string TruncateUtf8ForChat(const std::string &Text, size_t MaxBytes)
 	return Text.substr(0, End);
 }
 
-std::string ChrisMemoryKey(const char *pName)
+[[maybe_unused]] std::string ChrisMemoryKey(const char *pName)
 {
 	static const char s_aHex[] = "0123456789abcdef";
 	std::string Key;
@@ -221,7 +228,7 @@ std::string ChrisMemoryKey(const char *pName)
 	return Key;
 }
 
-bool ParseChrisMemoryLine(const std::string &Line, std::string *pKey, int *pAffinity, int *pEnergy, int *pMeetCount)
+[[maybe_unused]] bool ParseChrisMemoryLine(const std::string &Line, std::string *pKey, int *pAffinity, int *pEnergy, int *pMeetCount)
 {
 	size_t Begin = 0;
 	size_t End = Line.find(' ', Begin);
@@ -300,7 +307,7 @@ bool ParsePoint(const std::string &Text, vec2 *pOut)
 	return true;
 }
 
-void AddSampledLine(std::vector<vec2> *pvOut, vec2 From, vec2 To, float Step)
+[[maybe_unused]] void AddSampledLine(std::vector<vec2> *pvOut, vec2 From, vec2 To, float Step)
 {
 	const float Distance = distance(From, To);
 	const int Segments = maximum(1, (int)std::ceil(Distance / Step));
@@ -429,7 +436,7 @@ std::vector<vec2> BuildBalancedSamples(const std::vector<std::vector<vec2>> &vSt
 	return vSamples;
 }
 
-}
+} // namespace
 
 bool CGameContext::LoadChiGlyphs()
 {
