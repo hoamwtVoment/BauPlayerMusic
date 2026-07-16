@@ -42,6 +42,10 @@ jobs:
       with:
         cache-bin: false
 
+    - name: Remove conflicting Command Line Tools headers
+      if: runner.os == 'macOS'
+      run: sudo rm -rf /Library/Developer/CommandLineTools
+
     - name: Configure server
       run: >-
         cmake -S . -B build
