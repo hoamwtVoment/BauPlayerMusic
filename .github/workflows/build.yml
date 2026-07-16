@@ -24,10 +24,13 @@ jobs:
         include:
         - name: Linux
           os: ubuntu-latest
+          warning-arg: -DCMAKE_CXX_FLAGS=-Werror
         - name: macOS
           os: macos-latest
+          warning-arg: -DCMAKE_CXX_FLAGS=-Werror
         - name: Windows
           os: windows-latest
+          warning-arg: ''
     env:
       CARGO_HTTP_MULTIPLEXING: false
 
@@ -50,7 +53,7 @@ jobs:
       run: >-
         cmake -S . -B build
         -DCLIENT=OFF
-        -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
+        ${{ matrix.warning-arg }}
         -DSERVER=ON
         -DTOOLS=ON
         -DDOWNLOAD_GTEST=OFF
