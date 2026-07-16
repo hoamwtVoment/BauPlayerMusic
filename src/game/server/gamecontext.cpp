@@ -6,11 +6,14 @@
 
 #include "teeinfo.h"
 #include <antibot/antibot_data.h>
+#include <base/hash.h>
+#include <base/hash_ctxt.h>
 #include <base/logger.h>
 #include <base/math.h>
 #include <base/system.h>
 #include <engine/console.h>
 #include <engine/engine.h>
+#include <engine/external/json-parser/json.h>
 #include <engine/map.h>
 #include <engine/server/server.h>
 #include <engine/shared/config.h>
@@ -20,12 +23,9 @@
 #include <engine/shared/memheap.h>
 #include <engine/shared/protocolglue.h>
 #include <engine/storage.h>
-#include <base/hash.h>  
-#include <base/hash_ctxt.h>
-#include <engine/external/json-parser/json.h>
 
+#include <sstream>
 #include <string>
-#include <sstream> 
 
 #include <game/collision.h>
 #include <game/gamecore.h>
@@ -156,7 +156,6 @@ void CGameContext::Construct(int Resetting)
 		InviteVote = SGameInviteVote{};
 }
 
-
 void CGameContext::Destruct(int Resetting)
 {
 	for(auto &pPlayer : m_apPlayers)
@@ -220,18 +219,18 @@ void CGameContext::Clear()
 	CTuningParams Tuning = m_Tuning;
 	CMutes Mutes = m_Mutes;
 	CMutes VoteMutes = m_VoteMutes;
-	CSongCooldowns SongCooldowns = m_SongCooldowns; 
+	CSongCooldowns SongCooldowns = m_SongCooldowns;
 	CSongCooldowns QQMessageCooldowns = m_QQMessageCooldowns;
 	const int64_t LastQQRelayTime = m_LastQQRelayTime;
 	CMusicState Music = m_Music;
 	const CRainbowName::SState RainbowNameState = m_RainbowName.GetState();
-	if(m_pController)  
-	{  
-		CGameControllerDDRace *pController = (CGameControllerDDRace *)m_pController;  
-		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)  
-		{  
-			*(m_aSavedBadmintonStates[i]) = pController->m_aBadmintonGameState[i]; 
-		}  
+	if(m_pController)
+	{
+		CGameControllerDDRace *pController = (CGameControllerDDRace *)m_pController;
+		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)
+		{
+			*(m_aSavedBadmintonStates[i]) = pController->m_aBadmintonGameState[i];
+		}
 	}
 
 	m_Resetting = true;
@@ -250,13 +249,13 @@ void CGameContext::Clear()
 	m_LastQQRelayTime = LastQQRelayTime;
 	m_Music = Music;
 	m_RainbowName.SetState(RainbowNameState);
-	if(m_pController)  
-	{  
-		CGameControllerDDRace *pController = (CGameControllerDDRace*)m_pController;  
-		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)  
-		{  
-			pController->m_aBadmintonGameState[i] = *(m_aSavedBadmintonStates[i]);  
-		}  
+	if(m_pController)
+	{
+		CGameControllerDDRace *pController = (CGameControllerDDRace *)m_pController;
+		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)
+		{
+			pController->m_aBadmintonGameState[i] = *(m_aSavedBadmintonStates[i]);
+		}
 	}
 }
 
@@ -346,7 +345,7 @@ void CGameContext::FillAntibot(CAntibotRoundData *pData)
 void CGameContext::CreateDamageInd(vec2 Pos, float Angle, int Amount, CClientMask Mask)
 {
 	float a = 3 * pi / 2 + Angle;
-	//float a = get_angle(dir);
+	// float a = get_angle(dir);
 	float s = a - pi / 3;
 	float e = a + pi / 3;
 	for(int i = 0; i < Amount; i++)
@@ -1166,17 +1165,17 @@ void CGameContext::OnPreTickTeehistorian()
 
 void CGameContext::OnTick()
 {
-    // handle song start time after reload
-    if(m_Music.NeedsDeferredStartTime())
-    {
-        m_Music.ApplyDeferredStartTime(time_timestamp());
-        SavePlaylistToFile();
-        // re-start lyrics to calculate tick with the correct start time
-        if(m_Music.LyricsActive())
-        {
-            StartLyrics(false);
-        }
-    }
+	// handle song start time after reload
+	if(m_Music.NeedsDeferredStartTime())
+	{
+		m_Music.ApplyDeferredStartTime(time_timestamp());
+		SavePlaylistToFile();
+		// re-start lyrics to calculate tick with the correct start time
+		if(m_Music.LyricsActive())
+		{
+			StartLyrics(false);
+		}
+	}
 
 	// check tuning
 	CheckPureTuning();
@@ -1222,12 +1221,11 @@ void CGameContext::OnTick()
 		UpdateBackendServerState();
 	}
 
-      
-    // 每0.1秒检查一次歌词  
-    if(Server()->Tick() % (Server()->TickSpeed() / 10) == 0)  
-    {  
-        CheckAndSendLyrics();  
-		CheckSongTransition() ;
+	// 每0.1秒检查一次歌词
+	if(Server()->Tick() % (Server()->TickSpeed() / 10) == 0)
+	{
+		CheckAndSendLyrics();
+		CheckSongTransition();
 		if(g_Config.m_SvMusicVoteProgressRefresh > 0 &&
 			m_Music.HasCurrentQueueSong() && m_Music.CurrentSongDuration() > 0.0f &&
 			Server()->Tick() >= m_LastMusicVoteMenuProgressRefreshTick + Server()->TickSpeed() * g_Config.m_SvMusicVoteProgressRefresh)
@@ -1235,12 +1233,11 @@ void CGameContext::OnTick()
 			RefreshMusicVoteMenus(-1);
 			m_LastMusicVoteMenuProgressRefreshTick = Server()->Tick();
 		}
-    }  
-
+	}
 
 	UpdatePlayerMaps();
 
-	//if(world.paused) // make sure that the game object always updates
+	// if(world.paused) // make sure that the game object always updates
 	m_pController->Tick();
 	m_RainbowName.Tick();
 
@@ -1452,7 +1449,7 @@ void CGameContext::OnTick()
 	{
 		m_Mutes.UnmuteExpired();
 		m_VoteMutes.UnmuteExpired();
-		m_SongCooldowns.CleanupExpired(); 
+		m_SongCooldowns.CleanupExpired();
 		m_QQMessageCooldowns.CleanupExpired();
 	}
 
@@ -2265,7 +2262,8 @@ void *CGameContext::PreProcessMsg(int *pMsgId, CUnpacker *pUnpacker, int ClientI
 			if(pMsg7->m_Force)
 			{
 				str_format(s_aRawMsg, sizeof(s_aRawMsg), "force_vote \"%s\" \"%s\" \"%s\"", pMsg7->m_pType, pMsg7->m_pValue, pMsg7->m_pReason);
-				Console()->SetAccessLevel(Authed == AUTHED_ADMIN ? IConsole::ACCESS_LEVEL_ADMIN : Authed == AUTHED_MOD ? IConsole::ACCESS_LEVEL_MOD : IConsole::ACCESS_LEVEL_HELPER);
+				Console()->SetAccessLevel(Authed == AUTHED_ADMIN ? IConsole::ACCESS_LEVEL_ADMIN : Authed == AUTHED_MOD ? IConsole::ACCESS_LEVEL_MOD :
+																	 IConsole::ACCESS_LEVEL_HELPER);
 				Console()->ExecuteLine(s_aRawMsg, ClientId, false);
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_ADMIN);
 				return nullptr;
@@ -2487,7 +2485,8 @@ void CGameContext::OnSayNetMessage(const CNetMsg_Cl_Say *pMsg, int ClientId, con
 			Console()->SetFlagMask(CFGFLAG_CHAT);
 			int Authed = Server()->GetAuthedState(ClientId);
 			if(Authed)
-				Console()->SetAccessLevel(Authed == AUTHED_ADMIN ? IConsole::ACCESS_LEVEL_ADMIN : Authed == AUTHED_MOD ? IConsole::ACCESS_LEVEL_MOD : IConsole::ACCESS_LEVEL_HELPER);
+				Console()->SetAccessLevel(Authed == AUTHED_ADMIN ? IConsole::ACCESS_LEVEL_ADMIN : Authed == AUTHED_MOD ? IConsole::ACCESS_LEVEL_MOD :
+																	 IConsole::ACCESS_LEVEL_HELPER);
 			else
 				Console()->SetAccessLevel(IConsole::ACCESS_LEVEL_USER);
 
@@ -3761,12 +3760,11 @@ void CGameContext::ConSetTeamAll(IConsole::IResult *pResult, void *pUserData)
 void CGameContext::ConHotReload(IConsole::IResult *pResult, void *pUserData)
 {
 	CGameContext *pSelf = (CGameContext *)pUserData;
-	pSelf->SaveLyricsState();  
+	pSelf->SaveLyricsState();
 	pSelf->SaveGomokuHotReloadState();
 	pSelf->SaveConnect4HotReloadState();
 	pSelf->SaveFlightChessHotReloadState();
 
-	CGameControllerDDRace *pController = (CGameControllerDDRace*)pSelf->m_pController;  
 	if(pSelf->m_pController)
 	{
 		CGameControllerDDRace *pController = (CGameControllerDDRace *)pSelf->m_pController;
@@ -3774,7 +3772,7 @@ void CGameContext::ConHotReload(IConsole::IResult *pResult, void *pUserData)
 		{
 			*(pSelf->m_aSavedBadmintonStates[i]) = pController->m_aBadmintonGameState[i];
 		}
-	} 
+	}
 	for(int i = 0; i < MAX_CLIENTS; i++)
 	{
 		if(!pSelf->GetPlayerChar(i))
@@ -4313,14 +4311,14 @@ void CGameContext::OnConsoleInit()
 	Console()->Register("chid_revoke", "i[client-id] r[exact-name]", CFGFLAG_SERVER, ConChidRevoke, this, "Revoke chat /chid from this exact current client ID and name");
 	Console()->Register("chris", "i[client-id] ?r[action]", CFGFLAG_SERVER, ConChris, this, "Control Chris for one player; use chris <client-id> help");
 	Console()->Register("reload_censorlist", "", CFGFLAG_SERVER, ConReloadCensorlist, this, "Reload the censorlist");
-	Console()->Register("lyrics_start", "", CFGFLAG_SERVER, ConStartLyrics, this, "Start displaying lyrics");  
-	Console()->Register("lyrics_stop", "", CFGFLAG_SERVER, ConStopLyrics, this, "Stop displaying lyrics");  
+	Console()->Register("lyrics_start", "", CFGFLAG_SERVER, ConStartLyrics, this, "Start displaying lyrics");
+	Console()->Register("lyrics_stop", "", CFGFLAG_SERVER, ConStopLyrics, this, "Stop displaying lyrics");
 	Console()->Register("lyrics_load", "s[song_id]", CFGFLAG_SERVER, ConLoadLyrics, this, "Load lyrics for song");
-	Console()->Register("queue_status", "", CFGFLAG_SERVER, ConQueueStatus, this, "Show queue status and validate state");  
-	Console()->Register("queue_clear", "", CFGFLAG_SERVER, ConQueueClear, this, "Clear the song queue");  
+	Console()->Register("queue_status", "", CFGFLAG_SERVER, ConQueueStatus, this, "Show queue status and validate state");
+	Console()->Register("queue_clear", "", CFGFLAG_SERVER, ConQueueClear, this, "Clear the song queue");
 	Console()->Register("queue_remove", "i[queue-number]", CFGFLAG_SERVER, ConQueueRemove, this, "Remove a non-playing song by its 1-based queue number");
-	Console()->Register("queue_skip", "", CFGFLAG_SERVER, ConQueueSkip, this, "Skip current song and play next");  
-    Console()->Register("queue_restart", "", CFGFLAG_SERVER, ConQueueRestart, this, "Restart queue playback from beginning");  
+	Console()->Register("queue_skip", "", CFGFLAG_SERVER, ConQueueSkip, this, "Skip current song and play next");
+	Console()->Register("queue_restart", "", CFGFLAG_SERVER, ConQueueRestart, this, "Restart queue playback from beginning");
 	Console()->Register("add_vote", "s[name] r[command]", CFGFLAG_SERVER, ConAddVote, this, "Add a voting option");
 	Console()->Register("remove_vote", "r[name]", CFGFLAG_SERVER, ConRemoveVote, this, "remove a voting option");
 	Console()->Register("force_vote", "s[name] s[command] ?r[reason]", CFGFLAG_SERVER, ConForceVote, this, "Force a voting option");
@@ -4446,8 +4444,8 @@ void CGameContext::RegisterChatCommands()
 	Console()->Register("save", "?r[code]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConSave, this, "Save team with code r.");
 	Console()->Register("load", "?r[code]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConLoad, this, "Load with code r. /load to check your existing saves");
 	Console()->Register("map", "?r[map]", CFGFLAG_CHAT | CFGFLAG_SERVER | CFGFLAG_NONTEEHISTORIC, ConMap, this, "Vote a map by name");
-   	Console()->Register("song", "r[name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatSong, this, "搜索歌曲");  
-    Console()->Register("choose", "i[number]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatChoose, this, "选择歌曲下载");
+	Console()->Register("song", "r[name]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatSong, this, "搜索歌曲");
+	Console()->Register("choose", "i[number]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatChoose, this, "选择歌曲下载");
 	Console()->Register("mls", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatMls, this, "显示播放列表");
 	Console()->Register("qqmsg", "r[message]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatQQMsg, this, "向 QQ 群发送喊话");
 	Console()->Register("musicrank", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConChatMusicRank, this, "查看点歌排行榜");
@@ -4468,10 +4466,10 @@ void CGameContext::RegisterChatCommands()
 	Console()->Register("flightchess_test", "", CFGFLAG_SERVER, ConFlightChessTest, this, "Toggle flight-chess board position markers");
 	Console()->Register("dice3d", "i[client-id]", CFGFLAG_SERVER, ConDice3D, this, "Spawn an independent 3D dice above a player");
 	Console()->Register("dice3d_clear", "", CFGFLAG_SERVER, ConDice3DClear, this, "Remove all independent 3D dice test entities");
-	Console()->Register("skip", "", CFGFLAG_CHAT, ConChatSkip, this, "Vote to skip current song"); // 新增  
-	Console()->Register("ball", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonBall, this, "加入身份（羽毛球区域内）");  
-	Console()->Register("red", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonRed, this, "加入红队（羽毛球区域内）");  
-	Console()->Register("blue", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonBlue, this, "加入蓝队（羽毛球区域内）");  
+	Console()->Register("skip", "", CFGFLAG_CHAT, ConChatSkip, this, "Vote to skip current song"); // 新增
+	Console()->Register("ball", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonBall, this, "加入身份（羽毛球区域内）");
+	Console()->Register("red", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonRed, this, "加入红队（羽毛球区域内）");
+	Console()->Register("blue", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonBlue, this, "加入蓝队（羽毛球区域内）");
 	Console()->Register("start", "i[score]", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonStart, this, "开始羽毛球游戏");
 	Console()->Register("ready", "", CFGFLAG_CHAT, ConChatGomokuReady, this, "确认开始棋局");
 	Console()->Register("bs", "", CFGFLAG_CHAT | CFGFLAG_SERVER, ConBadmintonStatus, this, "查看羽毛球游戏状态");
@@ -4736,7 +4734,6 @@ void CGameContext::OnInit(const void *pPersistentData)
 			}
 			m_TeeHistorian.RecordAuthInitial(i, Level, Server()->GetAuthName(i));
 		}
-		
 	}
 
 	Server()->DemoRecorder_HandleAutoStart();
@@ -4745,22 +4742,21 @@ void CGameContext::OnInit(const void *pPersistentData)
 	{
 		m_pScore = new CScore(this, ((CServer *)Server())->DbPool());
 	}
-	if(m_pController)  
-	{  
-		CGameControllerDDRace *pController = (CGameControllerDDRace*)m_pController;  
-		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)  
-		{  
-			pController->m_aBadmintonGameState[i] = *(m_aSavedBadmintonStates[i]);  
-		}  
+	if(m_pController)
+	{
+		CGameControllerDDRace *pController = (CGameControllerDDRace *)m_pController;
+		for(int i = 0; i < NUM_DDRACE_TEAMS; i++)
+		{
+			pController->m_aBadmintonGameState[i] = *(m_aSavedBadmintonStates[i]);
+		}
 	}
 
 	// create all entities from the game layer
 	CreateAllEntities(true);
 
-
 	m_pAntibot->RoundStart(this);
-	LoadPlaylistFromFile();  
-	LoadLyricsState();  
+	LoadPlaylistFromFile();
+	LoadLyricsState();
 	RestoreQueuePlaybackState();
 }
 
@@ -5037,7 +5033,7 @@ void CGameContext::OnShutdown(void *pPersistentData)
 		aio_free(m_pTeeHistorianFile);
 	}
 
-	SavePlaylistToFile();  
+	SavePlaylistToFile();
 
 	// Stop any demos being recorded.
 	Server()->StopDemos();
@@ -5258,7 +5254,7 @@ void CGameContext::SendRecord(int ClientId)
 	CNetMsg_Sv_Record Msg;
 	CNetMsg_Sv_RecordLegacy MsgLegacy;
 	MsgLegacy.m_PlayerTimeBest = Msg.m_PlayerTimeBest = Score()->PlayerData(ClientId)->m_BestTime * 100.0f;
-	MsgLegacy.m_ServerTimeBest = Msg.m_ServerTimeBest = m_pController->m_CurrentRecord * 100.0f; //TODO: finish this
+	MsgLegacy.m_ServerTimeBest = Msg.m_ServerTimeBest = m_pController->m_CurrentRecord * 100.0f; // TODO: finish this
 	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL, ClientId);
 	if(!Server()->IsSixup(ClientId) && GetClientVersion(ClientId) < VERSION_DDNET_MSG_LEGACY)
 	{
@@ -5788,7 +5784,8 @@ void CGameContext::OnUpdatePlayerServerInfo(CJsonStringWriter *pJSonWriter, int 
 	pJSonWriter->WriteAttribute("afk");
 	pJSonWriter->WriteBoolValue(m_apPlayers[Id]->IsAfk());
 
-	const int Team = m_pController->IsTeamPlay() ? m_apPlayers[Id]->GetTeam() : m_apPlayers[Id]->GetTeam() == TEAM_SPECTATORS ? -1 : GetDDRaceTeam(Id);
+	const int Team = m_pController->IsTeamPlay() ? m_apPlayers[Id]->GetTeam() : m_apPlayers[Id]->GetTeam() == TEAM_SPECTATORS ? -1 :
+																    GetDDRaceTeam(Id);
 
 	pJSonWriter->WriteAttribute("team");
 	pJSonWriter->WriteIntValue(Team);
@@ -5817,311 +5814,311 @@ bool CGameContext::PracticeByDefault() const
 	return g_Config.m_SvPracticeByDefault && g_Config.m_SvTestingCommands;
 }
 
-void CGameContext::ConBadmintonBall(IConsole::IResult *pResult, void *pUserData)  
-{  
-    CGameContext *pSelf = (CGameContext *)pUserData;  
-    if(!CheckClientId(pResult->m_ClientId))  
-        return;  
-  
-    CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    // 检查队伍状态（必须在有效队伍中）  
-    int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);  
-	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)  
-	{  
-		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");  
-		return;  
+void CGameContext::ConBadmintonBall(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	// 检查队伍状态（必须在有效队伍中）
+	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
+	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");
+		return;
 	}
-  
-    if(!pPlayer->m_InBadmintonZone)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");  
-        return;  
-    }  
-  
-    // 检查队伍内是否已经有ball身份的玩家  
-    for(int i = 0; i < MAX_CLIENTS; i++)  
-    {  
-        if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)  
-            continue;  
-          
-        if(pSelf->m_apPlayers[i]->m_BadmintonRole == ROLE_BALL)  
-        {  
-            pSelf->SendChatTarget(pResult->m_ClientId, "队伍中已经有玩家是球了");  
-            return;  
-        }  
-    }  
-  
-    pPlayer->m_BadmintonRole = ROLE_BALL;  
-    if(pPlayer->GetCharacter())  
-        pPlayer->GetCharacter()->SetDeepFrozen(true);  
-      
-    pSelf->SendChatTarget(pResult->m_ClientId, "你现在是球！");  
+
+	if(!pPlayer->m_InBadmintonZone)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");
+		return;
+	}
+
+	// 检查队伍内是否已经有ball身份的玩家
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)
+			continue;
+
+		if(pSelf->m_apPlayers[i]->m_BadmintonRole == ROLE_BALL)
+		{
+			pSelf->SendChatTarget(pResult->m_ClientId, "队伍中已经有玩家是球了");
+			return;
+		}
+	}
+
+	pPlayer->m_BadmintonRole = ROLE_BALL;
+	if(pPlayer->GetCharacter())
+		pPlayer->GetCharacter()->SetDeepFrozen(true);
+
+	pSelf->SendChatTarget(pResult->m_ClientId, "你现在是球！");
 }
-  
-void CGameContext::ConBadmintonRed(IConsole::IResult *pResult, void *pUserData)  
-{  
-    CGameContext *pSelf = (CGameContext *)pUserData;  
-    if(!CheckClientId(pResult->m_ClientId))  
-        return;  
-  
-    CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    // 检查队伍状态  
-	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);  
-	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)  
-	{  
-		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");  
-		return;  
+
+void CGameContext::ConBadmintonRed(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	// 检查队伍状态
+	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
+	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");
+		return;
 	}
-  
-    if(!pPlayer->m_InBadmintonZone)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");  
-        return;  
-    }  
-  
-    pPlayer->m_BadmintonRole = ROLE_RED; 
-	pPlayer->m_TeeInfos.m_UseCustomColor = 1;  
-	pPlayer->m_TeeInfos.m_ColorBody = 65461;  
+
+	if(!pPlayer->m_InBadmintonZone)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");
+		return;
+	}
+
+	pPlayer->m_BadmintonRole = ROLE_RED;
+	pPlayer->m_TeeInfos.m_UseCustomColor = 1;
+	pPlayer->m_TeeInfos.m_ColorBody = 65461;
 	pPlayer->m_TeeInfos.m_ColorFeet = 65461;
-    pSelf->SendSkinChangeMessage(pResult->m_ClientId);   
-    pSelf->SendChatTarget(pResult->m_ClientId, "你加入了红队！");  
-}  
-  
-void CGameContext::ConBadmintonBlue(IConsole::IResult *pResult, void *pUserData)  
-{  
-    CGameContext *pSelf = (CGameContext *)pUserData;  
-    if(!CheckClientId(pResult->m_ClientId))  
-        return;  
-  
-    CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    // 检查队伍状态  
-	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);  
-	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)  
-	{  
-		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");  
-		return;  
+	pSelf->SendSkinChangeMessage(pResult->m_ClientId);
+	pSelf->SendChatTarget(pResult->m_ClientId, "你加入了红队！");
+}
+
+void CGameContext::ConBadmintonBlue(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	// 检查队伍状态
+	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
+	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");
+		return;
 	}
-  
-    if(!pPlayer->m_InBadmintonZone)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");  
-        return;  
-    }  
-  
-    pPlayer->m_BadmintonRole = ROLE_BLUE;  
-	pPlayer->m_TeeInfos.m_UseCustomColor = 1;  
-	pPlayer->m_TeeInfos.m_ColorBody = 10223541;  
-	pPlayer->m_TeeInfos.m_ColorFeet = 10223541; 
-    pSelf->SendSkinChangeMessage(pResult->m_ClientId); 
-    pSelf->SendChatTarget(pResult->m_ClientId, "你加入了蓝队！");  
-}
 
-void CGameContext::ConBadmintonStart(IConsole::IResult *pResult, void *pUserData)  
-{  
-    CGameContext *pSelf = (CGameContext *)pUserData;  
-    if(!CheckClientId(pResult->m_ClientId))  
-        return;  
-	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    // 检查队伍状态  
-    int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);  
-	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)  
-	{  
-		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");  
-		return;  
+	if(!pPlayer->m_InBadmintonZone)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");
+		return;
 	}
-  
-    if(!pPlayer->m_InBadmintonZone)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");  
-        return;  
-    }  
-  
-    // 获取队伍游戏状态  
-    SBadmintonGameState *pGameState = &((CGameControllerDDRace*)pSelf->m_pController)->m_aBadmintonGameState[Team];  
-      
-    if(pGameState->m_GameActive)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "羽毛球游戏已经在进行中");  
-        return;  
-    }  
-  
-    int TargetScore = pResult->NumArguments() > 0 ? pResult->GetInteger(0) : 5;  
-    if(TargetScore <= 0 || TargetScore > 50)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "获胜分数必须在1-50之间");  
-        return;  
-    }  
-  
-    // 统计队伍内羽毛球区域的玩家  
-    int RedCount = 0, BlueCount = 0;  
-    bool HasBall = false;  
-	for(int i = 0; i < MAX_CLIENTS; i++)  
-    {  
-        if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)  
-            continue;  
-          
-        if(!pSelf->m_apPlayers[i]->m_InBadmintonZone)  
-            continue;  
-  
-        switch(pSelf->m_apPlayers[i]->m_BadmintonRole)  
-        {  
-            case ROLE_BALL:  
-                HasBall = true;  
-                break;  
-            case ROLE_RED:  
-                RedCount++;  
-                break;  
-            case ROLE_BLUE:  
-                BlueCount++;  
-                break;  
-        }  
-    }  
-  
-    // 检查游戏开始条件  
-    if(!HasBall)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "需要有一个球才能开始游戏");  
-        return;  
-    }  
-  
-    if(RedCount == 0 || BlueCount == 0)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "红队和蓝队都需要至少有一个玩家");  
-        return;  
-    }  
-  
-    if(RedCount != BlueCount)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "红队和蓝队玩家数量必须相等");  
-        return;  
-    }  
-  
-    // 开始游戏  
-    pGameState->m_GameActive = true;  
-    pGameState->m_GameScore = TargetScore;  
-    pGameState->m_RedScore = 0;  
-    pGameState->m_BlueScore = 0;  
-	for(int i = 0; i < MAX_CLIENTS; i++)  
-    {  
-        if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)  
-            continue;  
-          
-        if(pSelf->m_apPlayers[i]->m_InBadmintonZone)  
-        {  
-            CPlayer *pPlayer = pSelf->m_apPlayers[i];  
-            if(pPlayer->m_BadmintonRole == ROLE_RED)  
-            {  
-                pPlayer->m_TeeInfos.m_UseCustomColor = 1;  
-				pPlayer->m_TeeInfos.m_ColorBody = 65461;  
-				pPlayer->m_TeeInfos.m_ColorFeet = 65461;  
-            }  
-            else if(pPlayer->m_BadmintonRole == ROLE_BLUE)  
-            {  
-                pPlayer->m_TeeInfos.m_UseCustomColor = 1;  
-				pPlayer->m_TeeInfos.m_ColorBody = 10223541;  
-				pPlayer->m_TeeInfos.m_ColorFeet = 10223541;
-            }  
-              
-            // 发送皮肤更新消息给所有客户端  
-            pSelf->SendSkinChangeMessage(i);  
-        }  
-    } 
-  
-    char aBuf[256];  
-    str_format(aBuf, sizeof(aBuf), "羽毛球游戏开始！目标分数：%d", TargetScore);  
-    pSelf->SendChatTeam(Team, aBuf);  
+
+	pPlayer->m_BadmintonRole = ROLE_BLUE;
+	pPlayer->m_TeeInfos.m_UseCustomColor = 1;
+	pPlayer->m_TeeInfos.m_ColorBody = 10223541;
+	pPlayer->m_TeeInfos.m_ColorFeet = 10223541;
+	pSelf->SendSkinChangeMessage(pResult->m_ClientId);
+	pSelf->SendChatTarget(pResult->m_ClientId, "你加入了蓝队！");
 }
 
-void CGameContext::ConBadmintonStatus(IConsole::IResult *pResult, void *pUserData)  
-{  
-    CGameContext *pSelf = (CGameContext *)pUserData;  
-    if(!CheckClientId(pResult->m_ClientId))  
-        return;  
-  
-    CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    if(!pPlayer->m_InBadmintonZone)  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");  
-        return;  
-    }  
-  
-    int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);  
-    int RedCount = 0, BlueCount = 0;  
-    bool HasBall = false;  
-    char aBallPlayer[64] = "";  
-  
-    // 统计羽毛球区域内的玩家  
-    for(int i = 0; i < MAX_CLIENTS; i++)  
-    {  
-        if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)  
-            continue;  
-          
-        if(!pSelf->m_apPlayers[i]->m_InBadmintonZone)  
-            continue;  
-  
-        switch(pSelf->m_apPlayers[i]->m_BadmintonRole)  
-        {  
-            case ROLE_BALL:  
-                HasBall = true;  
-                str_copy(aBallPlayer, pSelf->Server()->ClientName(i));  
-                break;  
-            case ROLE_RED:  
-                RedCount++;  
-                break;  
-            case ROLE_BLUE:  
-                BlueCount++;  
-                break;  
-        }  
-    }  
-  
-    // 队伍状态才是唯一比分来源，不能读取热重载后会被重建的玩家副本。
-    SBadmintonGameState &Game = ((CGameControllerDDRace *)pSelf->m_pController)->m_aBadmintonGameState[Team];
-    char aBuf[512];  
-    if(Game.m_GameActive)  
-    {  
-        str_format(aBuf, sizeof(aBuf), "游戏进行中 | 目标分数:%d | 当前比分 红队:%d 蓝队:%d",   
-                  Game.m_GameScore, Game.m_RedScore, Game.m_BlueScore);  
-        pSelf->SendChatTarget(pResult->m_ClientId, aBuf);  
-    }  
-    else  
-    {  
-        pSelf->SendChatTarget(pResult->m_ClientId, "游戏未开始");  
-    }  
-  
-    str_format(aBuf, sizeof(aBuf), "红队:%d人 | 蓝队:%d人 | :%s",   
-              RedCount, BlueCount, HasBall ? aBallPlayer : "无");  
-    pSelf->SendChatTarget(pResult->m_ClientId, aBuf);  
+void CGameContext::ConBadmintonStart(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	// 检查队伍状态
+	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
+	if(Team < TEAM_FLOCK || (Team == TEAM_FLOCK && g_Config.m_SvTeam != SV_TEAM_FORCED_SOLO) || Team >= TEAM_SUPER)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "必须加入队伍才能使用羽毛球功能");
+		return;
+	}
+
+	if(!pPlayer->m_InBadmintonZone)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");
+		return;
+	}
+
+	// 获取队伍游戏状态
+	SBadmintonGameState *pGameState = &((CGameControllerDDRace *)pSelf->m_pController)->m_aBadmintonGameState[Team];
+
+	if(pGameState->m_GameActive)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "羽毛球游戏已经在进行中");
+		return;
+	}
+
+	int TargetScore = pResult->NumArguments() > 0 ? pResult->GetInteger(0) : 5;
+	if(TargetScore <= 0 || TargetScore > 50)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "获胜分数必须在1-50之间");
+		return;
+	}
+
+	// 统计队伍内羽毛球区域的玩家
+	int RedCount = 0, BlueCount = 0;
+	bool HasBall = false;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)
+			continue;
+
+		if(!pSelf->m_apPlayers[i]->m_InBadmintonZone)
+			continue;
+
+		switch(pSelf->m_apPlayers[i]->m_BadmintonRole)
+		{
+		case ROLE_BALL:
+			HasBall = true;
+			break;
+		case ROLE_RED:
+			RedCount++;
+			break;
+		case ROLE_BLUE:
+			BlueCount++;
+			break;
+		}
+	}
+
+	// 检查游戏开始条件
+	if(!HasBall)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "需要有一个球才能开始游戏");
+		return;
+	}
+
+	if(RedCount == 0 || BlueCount == 0)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "红队和蓝队都需要至少有一个玩家");
+		return;
+	}
+
+	if(RedCount != BlueCount)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "红队和蓝队玩家数量必须相等");
+		return;
+	}
+
+	// 开始游戏
+	pGameState->m_GameActive = true;
+	pGameState->m_GameScore = TargetScore;
+	pGameState->m_RedScore = 0;
+	pGameState->m_BlueScore = 0;
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)
+			continue;
+
+		if(pSelf->m_apPlayers[i]->m_InBadmintonZone)
+		{
+			CPlayer *pTeamPlayer = pSelf->m_apPlayers[i];
+			if(pTeamPlayer->m_BadmintonRole == ROLE_RED)
+			{
+				pTeamPlayer->m_TeeInfos.m_UseCustomColor = 1;
+				pTeamPlayer->m_TeeInfos.m_ColorBody = 65461;
+				pTeamPlayer->m_TeeInfos.m_ColorFeet = 65461;
+			}
+			else if(pTeamPlayer->m_BadmintonRole == ROLE_BLUE)
+			{
+				pTeamPlayer->m_TeeInfos.m_UseCustomColor = 1;
+				pTeamPlayer->m_TeeInfos.m_ColorBody = 10223541;
+				pTeamPlayer->m_TeeInfos.m_ColorFeet = 10223541;
+			}
+
+			// 发送皮肤更新消息给所有客户端
+			pSelf->SendSkinChangeMessage(i);
+		}
+	}
+
+	char aBuf[256];
+	str_format(aBuf, sizeof(aBuf), "羽毛球游戏开始！目标分数：%d", TargetScore);
+	pSelf->SendChatTeam(Team, aBuf);
 }
 
-void CGameContext::SendSkinChangeMessage(int ClientId)  
-{  
-    CPlayer *pPlayer = m_apPlayers[ClientId];  
-    if(!pPlayer)  
-        return;  
-  
-    // 发送0.7协议的皮肤更新消息  
-    protocol7::CNetMsg_Sv_SkinChange Msg;  
-    Msg.m_ClientId = ClientId;  
-    for(int p = 0; p < protocol7::NUM_SKINPARTS; p++)  
-    {  
-        Msg.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_apSkinPartNames[p];  
-        Msg.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];  
-        Msg.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];  
-    }  
-    Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);  
+void CGameContext::ConBadmintonStatus(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	if(!CheckClientId(pResult->m_ClientId))
+		return;
+
+	CPlayer *pPlayer = pSelf->m_apPlayers[pResult->m_ClientId];
+	if(!pPlayer)
+		return;
+
+	if(!pPlayer->m_InBadmintonZone)
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "只能在羽毛球区域使用此命令");
+		return;
+	}
+
+	int Team = pSelf->GetDDRaceTeam(pResult->m_ClientId);
+	int RedCount = 0, BlueCount = 0;
+	bool HasBall = false;
+	char aBallPlayer[64] = "";
+
+	// 统计羽毛球区域内的玩家
+	for(int i = 0; i < MAX_CLIENTS; i++)
+	{
+		if(!pSelf->m_apPlayers[i] || pSelf->GetDDRaceTeam(i) != Team)
+			continue;
+
+		if(!pSelf->m_apPlayers[i]->m_InBadmintonZone)
+			continue;
+
+		switch(pSelf->m_apPlayers[i]->m_BadmintonRole)
+		{
+		case ROLE_BALL:
+			HasBall = true;
+			str_copy(aBallPlayer, pSelf->Server()->ClientName(i));
+			break;
+		case ROLE_RED:
+			RedCount++;
+			break;
+		case ROLE_BLUE:
+			BlueCount++;
+			break;
+		}
+	}
+
+	// 队伍状态才是唯一比分来源，不能读取热重载后会被重建的玩家副本。
+	SBadmintonGameState &Game = ((CGameControllerDDRace *)pSelf->m_pController)->m_aBadmintonGameState[Team];
+	char aBuf[512];
+	if(Game.m_GameActive)
+	{
+		str_format(aBuf, sizeof(aBuf), "游戏进行中 | 目标分数:%d | 当前比分 红队:%d 蓝队:%d",
+			Game.m_GameScore, Game.m_RedScore, Game.m_BlueScore);
+		pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
+	}
+	else
+	{
+		pSelf->SendChatTarget(pResult->m_ClientId, "游戏未开始");
+	}
+
+	str_format(aBuf, sizeof(aBuf), "红队:%d人 | 蓝队:%d人 | :%s",
+		RedCount, BlueCount, HasBall ? aBallPlayer : "无");
+	pSelf->SendChatTarget(pResult->m_ClientId, aBuf);
+}
+
+void CGameContext::SendSkinChangeMessage(int ClientId)
+{
+	CPlayer *pPlayer = m_apPlayers[ClientId];
+	if(!pPlayer)
+		return;
+
+	// 发送0.7协议的皮肤更新消息
+	protocol7::CNetMsg_Sv_SkinChange Msg;
+	Msg.m_ClientId = ClientId;
+	for(int p = 0; p < protocol7::NUM_SKINPARTS; p++)
+	{
+		Msg.m_apSkinPartNames[p] = pPlayer->m_TeeInfos.m_apSkinPartNames[p];
+		Msg.m_aSkinPartColors[p] = pPlayer->m_TeeInfos.m_aSkinPartColors[p];
+		Msg.m_aUseCustomColors[p] = pPlayer->m_TeeInfos.m_aUseCustomColors[p];
+	}
+	Server()->SendPackMsg(&Msg, MSGFLAG_VITAL | MSGFLAG_NORECORD, -1);
 }

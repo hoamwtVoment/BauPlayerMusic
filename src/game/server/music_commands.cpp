@@ -12,8 +12,7 @@
 #include <string>
 #include <vector>
 
-namespace
-{
+namespace {
 
 void ResetQueueSongRuntimeState(SongInfo *pSong)
 {
@@ -57,22 +56,20 @@ bool ParseDiceSpec(const char *pSpec, int *pCount, int *pSides)
 {
 	std::string Spec = pSpec && pSpec[0] ? pSpec : "100";
 	const size_t DPos = Spec.find_first_of("dD");
-	try
+	if(DPos == std::string::npos)
 	{
-		if(DPos == std::string::npos)
-		{
-			*pCount = 1;
-			*pSides = std::stoi(Spec);
-		}
-		else
-		{
-			*pCount = DPos == 0 ? 1 : std::stoi(Spec.substr(0, DPos));
-			*pSides = std::stoi(Spec.substr(DPos + 1));
-		}
+		*pCount = 1;
+		if(!str_toint(Spec.c_str(), pSides))
+			return false;
 	}
-	catch(...)
+	else
 	{
-		return false;
+		if(DPos == 0)
+			*pCount = 1;
+		else if(!str_toint(Spec.substr(0, DPos).c_str(), pCount))
+			return false;
+		if(!str_toint(Spec.substr(DPos + 1).c_str(), pSides))
+			return false;
 	}
 	return *pCount >= 1 && *pCount <= 20 && *pSides >= 2 && *pSides <= 1000;
 }
@@ -138,98 +135,98 @@ int FunRandomInt(int MaxExclusive)
 	return (int)((uint32_t)secure_rand() % (uint32_t)MaxExclusive);
 }
 
+} // namespace
+
+void CGameContext::ConChatSong(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	int ClientID = pResult->m_ClientId;
+
+	if(pResult->NumArguments() < 1)
+	{
+		pSelf->SendChatTarget(ClientID, "用法: /song <歌名>");
+		return;
+	}
+
+	// 获取客户端IP地址
+	const NETADDR *pAddr = pSelf->Server()->ClientAddr(ClientID);
+
+	int64_t Now = time_timestamp();
+	int SecondsLeft = 0;
+	if(pSelf->m_Music.SongSearchInGlobalCooldown(Now, g_Config.m_SvMusicGlobalCooldown, &SecondsLeft))
+	{
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "切歌后需等待 %d 秒才能搜索新歌曲", SecondsLeft);
+		pSelf->SendChatTarget(ClientID, aBuf);
+		return;
+	}
+
+	if(pSelf->m_SongCooldowns.IsCooldown(pAddr))
+	{
+		SecondsLeft = pSelf->m_SongCooldowns.GetSecondsLeft(pAddr);
+		char aBuf[128];
+		str_format(aBuf, sizeof(aBuf), "请等待 %d 秒后再使用 /song 命令", SecondsLeft);
+		pSelf->SendChatTarget(ClientID, aBuf);
+		return;
+	}
+
+	pSelf->m_SongCooldowns.SetCooldown(pAddr, g_Config.m_SvMusicPlayerCooldown);
+
+	const char *pSongName = pResult->GetString(0);
+
+	pSelf->RequestSongSearch(ClientID, pSongName);
+
+	pSelf->SendChatTarget(ClientID, "正在搜索歌曲...");
 }
 
-void CGameContext::ConChatSong(IConsole::IResult *pResult, void *pUserData)    
-{    
-    CGameContext *pSelf = (CGameContext *)pUserData;    
-    int ClientID = pResult->m_ClientId;    
+void CGameContext::ConChatChoose(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
+	int ClientID = pResult->m_ClientId;
 
-    if(pResult->NumArguments() < 1)    
-    {    
-        pSelf->SendChatTarget(ClientID, "用法: /song <歌名>");    
-        return;    
-    }    
-      
-    // 获取客户端IP地址  
-    const NETADDR *pAddr = pSelf->Server()->ClientAddr(ClientID);  
-      
-    int64_t Now = time_timestamp();  
-    int SecondsLeft = 0;
-    if(pSelf->m_Music.SongSearchInGlobalCooldown(Now, g_Config.m_SvMusicGlobalCooldown, &SecondsLeft))
-    {  
-        char aBuf[128];  
-        str_format(aBuf, sizeof(aBuf), "切歌后需等待 %d 秒才能搜索新歌曲", SecondsLeft);  
-        pSelf->SendChatTarget(ClientID, aBuf);  
-        return;  
-    }  
-      
-    if(pSelf->m_SongCooldowns.IsCooldown(pAddr))  
-    {  
-        int SecondsLeft = pSelf->m_SongCooldowns.GetSecondsLeft(pAddr);  
-        char aBuf[128];  
-        str_format(aBuf, sizeof(aBuf), "请等待 %d 秒后再使用 /song 命令", SecondsLeft);  
-        pSelf->SendChatTarget(ClientID, aBuf);  
-        return;  
-    }  
-      
-    pSelf->m_SongCooldowns.SetCooldown(pAddr, g_Config.m_SvMusicPlayerCooldown);
-      
-    const char *pSongName = pResult->GetString(0);    
-        
-    pSelf->RequestSongSearch(ClientID, pSongName);
-        
-    pSelf->SendChatTarget(ClientID, "正在搜索歌曲...");    
-}
-  
-void CGameContext::ConChatChoose(IConsole::IResult *pResult, void *pUserData)    
-{    
-    CGameContext *pSelf = (CGameContext *)pUserData;    
-    int ClientID = pResult->m_ClientId;    
-        
-    if(pResult->NumArguments() < 1)    
-    {    
-        pSelf->SendChatTarget(ClientID, "用法: /choose <编号>");    
-        return;    
-    }    
-        
-    int Index = pResult->GetInteger(0) - 1;   
-        
-    const int ResultCount = pSelf->m_Music.SearchResultCount(ClientID);
-    if(ResultCount == 0)
-    {    
-        pSelf->SendChatTarget(ClientID, "请先使用 /song 搜索歌曲");    
-        return;    
-    }    
-        
-    SongInfo Song;
-    if(!pSelf->m_Music.GetSearchResult(ClientID, Index, &Song))
-    {    
-        char aBuf[256];  
-        str_format(aBuf, sizeof(aBuf), "无效的编号，请输入 1 到 %d 之间的数字", ResultCount);
-        pSelf->SendChatTarget(ClientID, aBuf);    
-        return;    
-    }    
-    Song.requesterName = pSelf->Server()->ClientName(ClientID);
-    Song.requesterSource = "game";
-    Song.requesterId = Song.requesterName;
-      
-    char aVoteDesc[VOTE_DESC_LENGTH];  
-    str_format(aVoteDesc, sizeof(aVoteDesc), "将 '%s - %s' 添加到播放队列",   
-               Song.title.c_str(), Song.artist.c_str());  
-      
-    const int VoteId = pSelf->m_Music.AddPendingSongVote(Song);
+	if(pResult->NumArguments() < 1)
+	{
+		pSelf->SendChatTarget(ClientID, "用法: /choose <编号>");
+		return;
+	}
 
-    char aVoteCmd[VOTE_CMD_LENGTH];  
-    str_format(aVoteCmd, sizeof(aVoteCmd), "download_song %d", VoteId);
-      
-    char aChatMsg[512];  
-    str_format(aChatMsg, sizeof(aChatMsg), "'%s' 发起投票将歌曲添加到播放队列",   
-               pSelf->Server()->ClientName(ClientID));  
+	int Index = pResult->GetInteger(0) - 1;
 
-    pSelf->CallVote(ClientID, aVoteDesc, aVoteCmd, "添加到播放队列", aChatMsg, aVoteDesc);  
-      
-    pSelf->m_Music.ClearSearchResults(ClientID);  
+	const int ResultCount = pSelf->m_Music.SearchResultCount(ClientID);
+	if(ResultCount == 0)
+	{
+		pSelf->SendChatTarget(ClientID, "请先使用 /song 搜索歌曲");
+		return;
+	}
+
+	SongInfo Song;
+	if(!pSelf->m_Music.GetSearchResult(ClientID, Index, &Song))
+	{
+		char aBuf[256];
+		str_format(aBuf, sizeof(aBuf), "无效的编号，请输入 1 到 %d 之间的数字", ResultCount);
+		pSelf->SendChatTarget(ClientID, aBuf);
+		return;
+	}
+	Song.requesterName = pSelf->Server()->ClientName(ClientID);
+	Song.requesterSource = "game";
+	Song.requesterId = Song.requesterName;
+
+	char aVoteDesc[VOTE_DESC_LENGTH];
+	str_format(aVoteDesc, sizeof(aVoteDesc), "将 '%s - %s' 添加到播放队列",
+		Song.title.c_str(), Song.artist.c_str());
+
+	const int VoteId = pSelf->m_Music.AddPendingSongVote(Song);
+
+	char aVoteCmd[VOTE_CMD_LENGTH];
+	str_format(aVoteCmd, sizeof(aVoteCmd), "download_song %d", VoteId);
+
+	char aChatMsg[512];
+	str_format(aChatMsg, sizeof(aChatMsg), "'%s' 发起投票将歌曲添加到播放队列",
+		pSelf->Server()->ClientName(ClientID));
+
+	pSelf->CallVote(ClientID, aVoteDesc, aVoteCmd, "添加到播放队列", aChatMsg, aVoteDesc);
+
+	pSelf->m_Music.ClearSearchResults(ClientID);
 }
 
 void CGameContext::ConChatQQMsg(IConsole::IResult *pResult, void *pUserData)
@@ -452,44 +449,43 @@ void CGameContext::ConChatUndercover(IConsole::IResult *pResult, void *pUserData
 	pSelf->RequestUndercover(ClientID, Action.c_str(), Room.c_str(), Arg.c_str());
 }
 
+void CGameContext::ConDownloadSong(IConsole::IResult *pResult, void *pUserData)
+{
+	CGameContext *pSelf = (CGameContext *)pUserData;
 
-void CGameContext::ConDownloadSong(IConsole::IResult *pResult, void *pUserData)      
-{      
-    CGameContext *pSelf = (CGameContext *)pUserData;      
+	const int NumArgs = pResult->NumArguments();
+	if(NumArgs != 1 && NumArgs != 3)
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Invalid arguments for download_song");
+		return;
+	}
 
-    const int NumArgs = pResult->NumArguments();
-    if(NumArgs != 1 && NumArgs != 3)
-    {      
-        pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Invalid arguments for download_song");      
-        return;      
-    }      
+	SongInfo Song;
+	if(NumArgs == 1)
+	{
+		const int VoteId = pResult->GetInteger(0);
+		if(!pSelf->m_Music.ConsumePendingSongVote(VoteId, &Song))
+		{
+			pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Unknown or expired song vote id");
+			return;
+		}
+	}
+	else
+	{
+		Song.title = pResult->GetString(0);
+		Song.artist = pResult->GetString(1);
+		Song.page_url = pResult->GetString(2);
+		Song.requesterName = "Server";
+		Song.requesterSource = "server";
+		Song.requesterId = "server";
+	}
 
-    SongInfo Song;
-    if(NumArgs == 1)
-    {
-        const int VoteId = pResult->GetInteger(0);
-        if(!pSelf->m_Music.ConsumePendingSongVote(VoteId, &Song))
-        {
-            pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Unknown or expired song vote id");
-            return;
-        }
-    }
-    else
-    {
-        Song.title = pResult->GetString(0);
-        Song.artist = pResult->GetString(1);
-        Song.page_url = pResult->GetString(2);
-        Song.requesterName = "Server";
-        Song.requesterSource = "server";
-        Song.requesterId = "server";
-    }
+	ResetQueueSongRuntimeState(&Song);
+	pSelf->AddToPlaylist(Song);
 
-    ResetQueueSongRuntimeState(&Song);
-    pSelf->AddToPlaylist(Song);      
-      
-    if(pSelf->m_Music.QueueSize() == 1 && !pSelf->m_Music.IsPlayingFromQueue())
-    {  
-        pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Starting preload for first song in queue");  
-        pSelf->InitializeQueuePlayback();  
-    }  
+	if(pSelf->m_Music.QueueSize() == 1 && !pSelf->m_Music.IsPlayingFromQueue())
+	{
+		pSelf->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "server", "Starting preload for first song in queue");
+		pSelf->InitializeQueuePlayback();
+	}
 }

@@ -24,16 +24,12 @@ jobs:
         include:
         - name: Linux
           os: ubuntu-latest
-          cxxflags: -Werror
         - name: macOS
           os: macos-latest
-          cxxflags: -Werror
         - name: Windows
           os: windows-latest
-          cxxflags: /WX
     env:
       CARGO_HTTP_MULTIPLEXING: false
-      CXXFLAGS: ${{ matrix.cxxflags }}
 
     steps:
     - name: Checkout repository
@@ -50,6 +46,7 @@ jobs:
       run: >-
         cmake -S . -B build
         -DCLIENT=OFF
+        -DCMAKE_COMPILE_WARNING_AS_ERROR=ON
         -DSERVER=ON
         -DTOOLS=ON
         -DDOWNLOAD_GTEST=OFF
