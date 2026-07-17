@@ -1,6 +1,5 @@
 #include "music.h"
 
-#include <mutex>
 #include <utility>
 
 CMusicState::CMusicState(const CMusicState &Other)
@@ -17,14 +16,14 @@ CMusicState &CMusicState::operator=(const CMusicState &Other)
 
 void CMusicState::QueueEvent(SMusicEvent Event)
 {
-	std::lock_guard<std::mutex> Lock(m_MusicEventMutex);
+	CLockScope Lock(m_MusicEventMutex);
 	m_vMusicEvents.push_back(std::move(Event));
 }
 
 std::vector<SMusicEvent> CMusicState::DrainEvents()
 {
 	std::vector<SMusicEvent> vEvents;
-	std::lock_guard<std::mutex> Lock(m_MusicEventMutex);
+	CLockScope Lock(m_MusicEventMutex);
 	vEvents.swap(m_vMusicEvents);
 	return vEvents;
 }

@@ -9,7 +9,6 @@
 #include <deque>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <set>
 #include <string>
 #include <utility>
@@ -96,8 +95,8 @@ public:
 
 	CMusicState &operator=(const CMusicState &Other);
 
-	void QueueEvent(SMusicEvent Event) EXCLUDES(m_MusicEventMutex);
-	std::vector<SMusicEvent> DrainEvents() EXCLUDES(m_MusicEventMutex);
+	void QueueEvent(SMusicEvent Event) REQUIRES(!m_MusicEventMutex);
+	std::vector<SMusicEvent> DrainEvents() REQUIRES(!m_MusicEventMutex);
 	void AddQueuedSong(const SongInfo &Song);
 	// QueueIndex is zero-based. The song is inserted immediately after it.
 	// Returns the inserted zero-based index, or -1 when QueueIndex is invalid.
@@ -184,7 +183,7 @@ private:
 	int64_t m_LastSongChangeTime = 0;
 	int64_t m_LastPreloadSkipLogTime = 0;
 
-	std::mutex m_MusicEventMutex;
+	CLock m_MusicEventMutex;
 	std::vector<SMusicEvent> m_vMusicEvents;
 
 	void CopyFrom(const CMusicState &Other);
