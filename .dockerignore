@@ -14,7 +14,6 @@ data/musico/*.sqlite3
 src/android/
 src/macos/
 src/steam/
-src/tools/
 datasrc/
 tests/
 man/
