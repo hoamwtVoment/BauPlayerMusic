@@ -65,8 +65,8 @@ COPY --from=builder /build/build-server/DDNet-Server .
 COPY --from=builder /build/build-server/music_map_patcher .
 
 # Python 依赖
-COPY requirements.txt .
-RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
+COPY requirements.txt requirements-aliyun.txt .
+RUN pip install --no-cache-dir --break-system-packages -r requirements-aliyun.txt
 
 # 后端脚本
 COPY mds.py .
