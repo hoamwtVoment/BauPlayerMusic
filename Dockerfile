@@ -69,14 +69,20 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --break-system-packages -r requirements.txt audioop-lts
 
 # 后端脚本
-COPY mds.py admin_panel.py qqbot_bridge.py music_stats.py .
-COPY mds_aliyun.py turtle_soup.py undercover_game.py .
+COPY mds.py .
+COPY admin_panel.py .
+COPY qqbot_bridge.py .
+COPY music_stats.py .
+COPY mds_aliyun.py .
+COPY turtle_soup.py .
+COPY undercover_game.py .
 COPY admin_web/ admin_web/
 COPY data/ data/
 
 # 配置模板
 COPY storage.cfg .
-COPY .env.example myServerconfig.example.cfg .
+COPY .env.example .
+COPY myServerconfig.example.cfg .
 
 # 运行时目录
 RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
