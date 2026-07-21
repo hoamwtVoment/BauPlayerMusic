@@ -1224,7 +1224,6 @@ void CGameContext::OnTick()
 	// 每0.1秒检查一次歌词
 	if(Server()->Tick() % (Server()->TickSpeed() / 10) == 0)
 	{
-		CheckAndSendLyrics();
 		CheckSongTransition();
 		if(g_Config.m_SvMusicVoteProgressRefresh > 0 &&
 			m_Music.HasCurrentQueueSong() && m_Music.CurrentSongDuration() > 0.0f &&
@@ -1258,6 +1257,10 @@ void CGameContext::OnTick()
 		if(pPlayer)
 			pPlayer->PostPostTick();
 	}
+
+	// 在分数广播之后发送歌词，避免被覆盖
+	if(Server()->Tick() % (Server()->TickSpeed() / 10) == 0)
+		CheckAndSendLyrics();
 
 	// update voting
 	if(m_VoteCloseTime)
