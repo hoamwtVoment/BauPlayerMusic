@@ -2,12 +2,12 @@
 # 多阶段构建：编译 C++ 服务端 → Python 运行时
 
 # ==================== 阶段 1: 编译 ====================
-FROM debian:12-slim AS builder
+FROM ubuntu:latest AS builder
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential cmake \
+    build-essential cmake pkg-config \
     libcurl4-openssl-dev \
-    libfreetype6-dev \
+    libfreetype-dev \
     libglew-dev \
     libogg-dev \
     libopus-dev \
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev \
     libssl-dev \
     libwavpack-dev \
-    libz-dev \
+    zlib1g-dev \
     ca-certificates \
     curl \
     python3 \
@@ -40,20 +40,22 @@ RUN cmake -S . -B build-server \
     && cmake --build build-server --config Release --target game-server music_map_patcher -- -j$(nproc)
 
 # ==================== 阶段 2: 运行时 ====================
-FROM python:3.12-slim-bookworm
+FROM ubuntu:latest
 
-# FFmpeg 和运行时库
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
     ffmpeg \
-    libcurl4 \
+    libcurl4t64 \
     libfreetype6 \
     libopus0 \
     libopusfile0 \
     libsdl2-2.0-0 \
     libsqlite3-0 \
-    libssl3 \
+    libssl3t64 \
     libwavpack1 \
     libzstd1 \
+    ca-certificates \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -62,10 +64,11 @@ WORKDIR /app
 COPY --from=builder /build/build-server/DDNet-Server .
 COPY --from=builder /build/build-server/music_map_patcher .
 
-# Python 后端
+# Python 依赖
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt audioop-lts
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt audioop-lts
 
+# 后端脚本
 COPY mds.py admin_panel.py qqbot_bridge.py music_stats.py .
 COPY mds_aliyun.py turtle_soup.py undercover_game.py .
 COPY admin_web/ admin_web/
@@ -78,7 +81,7 @@ COPY .env.example myServerconfig.example.cfg .
 # 运行时目录
 RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
 
-# 入口：复制配置模板并启动
+# 入口脚本
 COPY docker-entrypoint.sh .
 RUN chmod +x docker-entrypoint.sh
 
