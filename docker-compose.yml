@@ -14,6 +14,7 @@ services:
       - ./data/ddnet:/root/.local/share/ddnet
       - ./netease_cookies.json:/app/netease_cookies.json
       - ./.env:/app/.env.host:ro
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
     environment:
       - TZ=Asia/Shanghai
       - PYTHONUNBUFFERED=1
