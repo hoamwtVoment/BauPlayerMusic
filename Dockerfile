@@ -66,7 +66,7 @@ COPY --from=builder /build/build-server/music_map_patcher .
 
 # Python 依赖
 COPY requirements.txt .
-RUN pip install --no-cache-dir --break-system-packages -r requirements.txt audioop-lts
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt
 
 # 后端脚本
 COPY mds.py .
