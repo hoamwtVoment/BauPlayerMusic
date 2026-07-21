@@ -1,0 +1,87 @@
+# BauPlayerMusic 部署镜像
+# 多阶段构建：编译 C++ 服务端 → Python 运行时
+
+# ==================== 阶段 1: 编译 ====================
+FROM debian:12-slim AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake \
+    libcurl4-openssl-dev \
+    libfreetype6-dev \
+    libglew-dev \
+    libogg-dev \
+    libopus-dev \
+    libopusfile-dev \
+    libpng-dev \
+    libsdl2-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libwavpack-dev \
+    libz-dev \
+    ca-certificates \
+    curl \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Rust 工具链
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build
+COPY . .
+
+# 编译服务端和地图缝合器
+RUN cmake -S . -B build-server \
+    -DCLIENT=OFF \
+    -DWEBSOCKETS=OFF \
+    -DMYSQL=OFF \
+    -DPREFER_BUNDLED_LIBS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build-server --config Release --target game-server music_map_patcher -- -j$(nproc)
+
+# ==================== 阶段 2: 运行时 ====================
+FROM python:3.12-slim-bookworm
+
+# FFmpeg 和运行时库
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libcurl4 \
+    libfreetype6 \
+    libopus0 \
+    libopusfile0 \
+    libsdl2-2.0-0 \
+    libsqlite3-0 \
+    libssl3 \
+    libwavpack1 \
+    libzstd1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 编译产物
+COPY --from=builder /build/build-server/DDNet-Server .
+COPY --from=builder /build/build-server/music_map_patcher .
+
+# Python 后端
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt audioop-lts
+
+COPY mds.py admin_panel.py qqbot_bridge.py music_stats.py .
+COPY mds_aliyun.py turtle_soup.py undercover_game.py .
+COPY admin_web/ admin_web/
+COPY data/ data/
+
+# 配置模板
+COPY storage.cfg .
+COPY .env.example myServerconfig.example.cfg .
+
+# 运行时目录
+RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
+
+# 入口：复制配置模板并启动
+COPY docker-entrypoint.sh .
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 8303/udp
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
