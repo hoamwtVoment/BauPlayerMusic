@@ -158,6 +158,7 @@ docker run -d \
   -v ./data/musicso:/app/data/musicso \
   -v ./data/musico/prepared_maps:/app/data/musico/prepared_maps \
   -v ./data/webmaps:/app/data/webmaps \
+  -v ./netease_cookies.json:/app/netease_cookies.json \
   -v ./myServerconfig.cfg:/app/myServerconfig.cfg:ro \
   -v ./.env:/app/.env:ro \
   -e TZ=Asia/Shanghai \

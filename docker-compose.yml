@@ -16,8 +16,8 @@ services:
       - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
       # Web 地图
       - ./data/webmaps:/app/data/webmaps
-      # 配置文件
-      - ./myServerconfig.cfg:/app/myServerconfig.cfg:ro
+      # 网易云登录 Cookie
+      - ./netease_cookies.json:/app/netease_cookies.json
       - ./.env:/app/.env:ro
     environment:
       - TZ=Asia/Shanghai
