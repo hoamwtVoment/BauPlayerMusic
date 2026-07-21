@@ -34,6 +34,7 @@ services:
     network_mode: host
     volumes:
       - ./data/musico:/app/data/musico
+      - ./data/musicso:/app/data/musicso
       - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
       - ./data/ddnet:/root/.local/share/ddnet
       - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
