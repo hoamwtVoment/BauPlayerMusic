@@ -31,8 +31,11 @@ RUN cmake -S . -B build-server \
     -DWEBSOCKETS=OFF \
     -DMYSQL=OFF \
     -DPREFER_BUNDLED_LIBS=ON \
-    -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build-server --config Release --target game-server music_map_patcher -- -j$(nproc)
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g" \
+    -DCMAKE_C_FLAGS="-fsanitize=address -g" \
+    -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+    && cmake --build build-server --config Debug --target game-server music_map_patcher -- -j$(nproc)
 
 FROM ubuntu:latest
 
@@ -47,6 +50,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libwavpack1 \
     libzstd1 \
     ca-certificates \
+    libasan8 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

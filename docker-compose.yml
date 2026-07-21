@@ -38,3 +38,4 @@ services:
       - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
     environment:
       - TZ=Asia/Shanghai
+      - ASAN_OPTIONS=halt_on_error=0:detect_leaks=0:log_path=/tmp/asan
