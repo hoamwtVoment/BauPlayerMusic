@@ -1,7 +1,7 @@
 services:
   bpmusic:
+    build: .
     image: bauplayermusic:latest
-    # 如果还没构建镜像: docker buildx build -t bauplayermusic .
     container_name: bpmusic
     restart: unless-stopped
     ports:
@@ -18,6 +18,8 @@ services:
       - ./data/webmaps:/app/data/webmaps
       # 网易云登录 Cookie
       - ./netease_cookies.json:/app/netease_cookies.json
+      # 配置文件
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg:ro
       - ./.env:/app/.env:ro
     environment:
       - TZ=Asia/Shanghai
