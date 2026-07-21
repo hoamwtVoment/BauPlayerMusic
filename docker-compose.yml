@@ -15,6 +15,8 @@ services:
       - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
       # Web 地图
       - ./data/webmaps:/app/data/webmaps
+      # DDNet 地图目录 (与 server 共享)
+      - ./data/ddnet:/root/.local/share/ddnet
       # 网易云登录 Cookie
       - ./netease_cookies.json:/app/netease_cookies.json
       # 配置文件
