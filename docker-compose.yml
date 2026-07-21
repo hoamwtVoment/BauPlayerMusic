@@ -1,6 +1,8 @@
 services:
   bpmusic:
     image: bauplayermusic:latest
+    # 如果还没构建镜像，可以替换为 build: .
+    # build: .
     container_name: bpmusic
     restart: unless-stopped
     ports:

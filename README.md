@@ -114,6 +114,71 @@ build-server/Release/music_map_patcher.exe
 
 构建后 CMake 会把 Python 后端、管理面板、requirements、启动脚本、`.env.example`、`myServerconfig.example.cfg`、中文笔画库和小游戏题库复制到服务端产物附近。DDNet 的数据目标也会准备运行所需的 `data` 文件。
 
+## Docker 部署（Linux）
+
+支持在 Linux 上通过 Docker 一键构建和运行，无需手动安装编译环境。
+
+### 构建镜像
+
+```bash
+git clone --recurse-submodules <你的仓库地址> BauPlayerMusic
+cd BauPlayerMusic
+docker build -t bauplayermusic .
+```
+
+### 准备配置
+
+```bash
+cp .env.example .env
+cp myServerconfig.example.cfg myServerconfig.cfg
+# 编辑 .env 和 myServerconfig.cfg
+```
+
+### 创建持久化目录
+
+```bash
+mkdir -p data/musico data/musicso data/musico/prepared_maps data/webmaps
+```
+
+### 使用 docker-compose（推荐）
+
+```bash
+docker compose up -d
+```
+
+### 或直接 docker run
+
+```bash
+docker run -d \
+  --name bpmusic \
+  --restart unless-stopped \
+  -p 8303:8303/udp \
+  -p 8787:8787 \
+  -v ./data/musico:/app/data/musico \
+  -v ./data/musicso:/app/data/musicso \
+  -v ./data/musico/prepared_maps:/app/data/musico/prepared_maps \
+  -v ./data/webmaps:/app/data/webmaps \
+  -v ./myServerconfig.cfg:/app/myServerconfig.cfg:ro \
+  -v ./.env:/app/.env:ro \
+  -e TZ=Asia/Shanghai \
+  bauplayermusic
+```
+
+### 查看日志
+
+```bash
+docker compose logs -f
+# 或
+docker logs -f bpmusic
+```
+
+### 注意事项
+
+- 容器内 Python 后端监听 `127.0.0.1:5000`，仅服务端进程访问，不暴露到宿主机。
+- Web 管理面板默认也监听 `127.0.0.1`，如需远程访问请通过反向代理。
+- NapCat / QQBot 需单独部署，容器内不包含。
+- 构建镜像时会从源码编译 DDNet 服务端，耗时约 5-10 分钟。
+
 ## 首次部署
 
 推荐把运行文件放在独立目录，例如 `C:\BauPlayerMusic`，不要直接在源码目录长期运行。
