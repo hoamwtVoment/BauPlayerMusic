@@ -1,15 +1,14 @@
 services:
-  bpmusic:
-    build: .
-    image: bauplayermusic:latest
-    container_name: bpmusic
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: bauplayermusic-backend:latest
+    container_name: bpmusic-backend
     restart: unless-stopped
     ports:
-      - "8303:8303/udp"
       - "8787:8787"
     volumes:
-      # 持久化数据（播放队列 / SQLite / 题库）
-      - ./data/musico:/app/data/musico
       # 下载的歌曲和封面
       - ./data/musicso:/app/data/musicso
       # 候选地图
@@ -19,7 +18,32 @@ services:
       # 网易云登录 Cookie
       - ./netease_cookies.json:/app/netease_cookies.json
       # 配置文件
-      - ./myServerconfig.cfg:/app/myServerconfig.cfg:ro
       - ./.env:/app/.env:ro
     environment:
       - TZ=Asia/Shanghai
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: bauplayermusic-server:latest
+    container_name: bpmusic-server
+    restart: unless-stopped
+    ports:
+      - "8303:8303/udp"
+    volumes:
+      # 播放队列
+      - ./data/musico:/app/data/musico
+      # 配置文件
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg:ro
+    environment:
+      - TZ=Asia/Shanghai
+    depends_on:
+      backend:
+        condition: service_healthy

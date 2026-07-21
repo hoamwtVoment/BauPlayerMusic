@@ -1,0 +1,31 @@
+# BauPlayerMusic Python 后端
+FROM ubuntu:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    ffmpeg \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt requirements-aliyun.txt .
+RUN pip install --no-cache-dir --break-system-packages -r requirements-aliyun.txt
+
+COPY mds.py .
+COPY admin_panel.py .
+COPY qqbot_bridge.py .
+COPY music_stats.py .
+COPY mds_aliyun.py .
+COPY turtle_soup.py .
+COPY undercover_game.py .
+COPY admin_web/ admin_web/
+COPY data/ data/
+COPY .env.example .
+
+RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
+
+EXPOSE 5000 8787
+
+ENTRYPOINT ["python3", "mds.py"]
