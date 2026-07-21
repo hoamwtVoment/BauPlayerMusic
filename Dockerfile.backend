@@ -23,9 +23,11 @@ COPY undercover_game.py .
 COPY admin_web/ admin_web/
 COPY data/ data/
 COPY .env.example .
+COPY docker-entrypoint-backend.sh .
+RUN chmod +x docker-entrypoint-backend.sh
 
 RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
 
 EXPOSE 5000 8787
 
-ENTRYPOINT ["python3", "mds.py"]
+ENTRYPOINT ["./docker-entrypoint-backend.sh"]
