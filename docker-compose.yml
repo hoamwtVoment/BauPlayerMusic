@@ -6,20 +6,13 @@ services:
     image: bauplayermusic-backend:latest
     container_name: bpmusic-backend
     restart: unless-stopped
-    ports:
-      - "8787:8787"
+    network_mode: host
     volumes:
-      # 下载的歌曲和封面
       - ./data/musicso:/app/data/musicso
-      # 候选地图
       - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
-      # Web 地图
       - ./data/webmaps:/app/data/webmaps
-      # DDNet 地图目录 (与 server 共享)
       - ./data/ddnet:/root/.local/share/ddnet
-      # 网易云登录 Cookie
       - ./netease_cookies.json:/app/netease_cookies.json
-      # 配置文件
       - ./.env:/app/.env.host:ro
     environment:
       - TZ=Asia/Shanghai
@@ -37,19 +30,11 @@ services:
     image: bauplayermusic-server:latest
     container_name: bpmusic-server
     restart: unless-stopped
-    ports:
-      - "8303:8303/udp"
+    network_mode: host
     volumes:
-      # 播放队列
       - ./data/musico:/app/data/musico
-      # 候选地图 (与 backend 共享)
       - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
-      # DDNet 用户数据 (地图安装目标)
       - ./data/ddnet:/root/.local/share/ddnet
-      # 配置文件
       - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
     environment:
       - TZ=Asia/Shanghai
-    depends_on:
-      backend:
-        condition: service_healthy

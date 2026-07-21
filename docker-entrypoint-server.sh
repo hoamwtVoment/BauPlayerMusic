@@ -7,6 +7,6 @@ else
     cp /app/myServerconfig.example.cfg /app/myServerconfig.cfg
 fi
 
-sed -i 's|sv_music_backend_url ".*"|sv_music_backend_url "http://backend:5000"|' /app/myServerconfig.cfg
+sed -i 's|sv_music_backend_url ".*"|sv_music_backend_url "http://127.0.0.1:5000"|' /app/myServerconfig.cfg
 
 exec ./DDNet-Server
