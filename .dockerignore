@@ -14,9 +14,4 @@ data/musico/*.sqlite3
 src/android/
 src/macos/
 src/steam/
-datasrc/
-tests/
-man/
-other/
-scripts/
 docker-compose*.yml
