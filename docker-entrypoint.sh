@@ -23,7 +23,7 @@ cleanup() {
 trap cleanup EXIT SIGTERM SIGINT SIGQUIT
 
 echo "[entrypoint] 启动 Python 后端..."
-python mds.py &
+python3 mds.py &
 BACKEND_PID=$!
 
 # 等待后端健康检查
