@@ -41,7 +41,7 @@ services:
       # 播放队列
       - ./data/musico:/app/data/musico
       # 配置文件
-      - ./myServerconfig.cfg:/app/myServerconfig.cfg:ro
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
     environment:
       - TZ=Asia/Shanghai
     depends_on:
