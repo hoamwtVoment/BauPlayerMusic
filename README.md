@@ -134,6 +134,24 @@ cp myServerconfig.example.cfg myServerconfig.cfg
 # 编辑 .env 和 myServerconfig.cfg
 ```
 
+### 获取网易云 Cookie
+
+点歌功能需要网易云音乐的登录 Cookie。容器内没有浏览器，**需要先在宿主机上运行一次 mds.py 完成登录**，生成 `netease_cookies.json`：
+
+```bash
+# 临时安装依赖
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+
+# 运行后端，会自动打开浏览器让你扫码登录
+python mds.py
+
+# 登录成功后会生成 netease_cookies.json，然后 Ctrl+C 退出即可
+deactivate
+```
+
+之后 `netease_cookies.json` 会随容器挂载持久化，无需重复登录。
+
 ### 创建持久化目录
 
 ```bash
