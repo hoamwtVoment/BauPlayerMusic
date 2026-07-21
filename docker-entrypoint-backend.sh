@@ -8,7 +8,6 @@ else
 fi
 
 sed -i 's/^BPMUSIC_HOST=.*/BPMUSIC_HOST=0.0.0.0/' /app/.env
-sed -i 's/^BPMUSIC_PANEL_HOST=.*/BPMUSIC_PANEL_HOST=0.0.0.0/' /app/.env
 
 if [ -f /app/myServerconfig.cfg.host ]; then
     cp /app/myServerconfig.cfg.host /app/myServerconfig.cfg
