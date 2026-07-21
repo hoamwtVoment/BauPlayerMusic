@@ -40,6 +40,10 @@ services:
     volumes:
       # 播放队列
       - ./data/musico:/app/data/musico
+      # 候选地图 (与 backend 共享)
+      - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
+      # DDNet 用户数据 (地图安装目标)
+      - ./data/ddnet:/root/.local/share/ddnet
       # 配置文件
       - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
     environment:
