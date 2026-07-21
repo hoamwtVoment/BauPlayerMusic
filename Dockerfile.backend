@@ -1,9 +1,47 @@
 # BauPlayerMusic Python 后端
+# 阶段 1: 编译 music_map_patcher
+FROM ubuntu:latest AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake pkg-config \
+    libcurl4-openssl-dev \
+    libfreetype-dev \
+    libglew-dev \
+    libogg-dev \
+    libopus-dev \
+    libopusfile-dev \
+    libpng-dev \
+    libsdl2-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libwavpack-dev \
+    zlib1g-dev \
+    ca-certificates \
+    curl \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build
+COPY . .
+
+RUN cmake -S . -B build-server \
+    -DCLIENT=OFF \
+    -DWEBSOCKETS=OFF \
+    -DMYSQL=OFF \
+    -DPREFER_BUNDLED_LIBS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build-server --config Release --target music_map_patcher -- -j$(nproc)
+
+# 阶段 2: Python 运行时
 FROM ubuntu:latest
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     python3 python3-pip python3-venv \
     ffmpeg \
+    libcurl4t64 \
     ca-certificates \
     curl \
     && rm -rf /var/lib/apt/lists/*
@@ -12,6 +50,8 @@ WORKDIR /app
 
 COPY requirements.txt requirements-aliyun.txt .
 RUN pip install --no-cache-dir --break-system-packages -r requirements-aliyun.txt
+
+COPY --from=builder /build/build-server/music_map_patcher .
 
 COPY mds.py .
 COPY admin_panel.py .
