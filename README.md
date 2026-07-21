@@ -123,7 +123,7 @@ build-server/Release/music_map_patcher.exe
 ```bash
 git clone --recurse-submodules <你的仓库地址> BauPlayerMusic
 cd BauPlayerMusic
-docker build -t bauplayermusic .
+docker buildx build -t bauplayermusic .
 ```
 
 ### 准备配置
