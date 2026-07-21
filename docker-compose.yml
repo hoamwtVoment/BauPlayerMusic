@@ -16,6 +16,7 @@ services:
       - ./.env:/app/.env.host:ro
     environment:
       - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/health"]
       interval: 5s
