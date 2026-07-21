@@ -1,68 +1,90 @@
-# Docker image to build DDNet for Linux and Windows (32 bit, 64 bit)
-# Usage:
-# 1. Build image
-# docker build -t ddnet - < Dockerfile
-# 2. Run the DDNet build script
-# docker run -it -v PATH_TO_DDNET:/ddnet:ro -v PATH_TO_OUTPUT_DIRECTORY:/build ddnet ./build-all.sh
-FROM debian:12
+# BauPlayerMusic 部署镜像
+# 多阶段构建：编译 C++ 服务端 → Python 运行时
 
-RUN apt-get update && apt-get install -y gcc-mingw-w64-x86-64-posix \
-        g++-mingw-w64-x86-64-posix \
-        gcc-mingw-w64-i686-posix \
-        g++-mingw-w64-i686-posix \
-        wget \
-        git \
-        ca-certificates \
-        build-essential \
-        python3 \
-        libcurl4-openssl-dev \
-        libfreetype6-dev \
-        libglew-dev \
-        libogg-dev \
-        libopus-dev \
-        libpng-dev \
-        libwavpack-dev \
-        libopusfile-dev \
-        libsdl2-dev \
-        cmake \
-        glslang-tools \
-        libavcodec-extra \
-        libavdevice-dev \
-        libavfilter-dev \
-        libavformat-dev \
-        libavutil-dev \
-        libcurl4-openssl-dev \
-        libnotify-dev \
-        libsqlite3-dev \
-        libssl-dev \
-        libvulkan-dev \
-        libx264-dev \
-        spirv-tools \
-        curl
+# ==================== 阶段 1: 编译 ====================
+FROM ubuntu:latest AS builder
 
-RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain stable -y
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake pkg-config \
+    libcurl4-openssl-dev \
+    libfreetype-dev \
+    libglew-dev \
+    libogg-dev \
+    libopus-dev \
+    libopusfile-dev \
+    libpng-dev \
+    libsdl2-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libwavpack-dev \
+    zlib1g-dev \
+    ca-certificates \
+    curl \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN ~/.cargo/bin/rustup toolchain install stable
-RUN ~/.cargo/bin/rustup target add i686-pc-windows-gnu
-RUN ~/.cargo/bin/rustup target add x86_64-pc-windows-gnu
+# Rust 工具链
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+ENV PATH="/root/.cargo/bin:${PATH}"
 
-RUN printf '#!/bin/bash\n \
-        export PATH=$PATH:$HOME/.cargo/bin\n \
-        set -x\n \
-        mkdir /build\n \
-        mkdir /build/linux\n \
-        cd /build/linux\n \
-        pwd\n \
-        cmake /ddnet && make -j$(nproc) \n \
-        mkdir /build/win64\n \
-        cd /build/win64\n \
-        pwd\n \
-        cmake -DCMAKE_TOOLCHAIN_FILE=/ddnet/cmake/toolchains/mingw64.toolchain /ddnet && make -j$(nproc) \n \
-        mkdir /build/win32\n \
-        cd /build/win32\n \
-        pwd\n \
-        cmake -DCMAKE_TOOLCHAIN_FILE=/ddnet/cmake/toolchains/mingw32.toolchain /ddnet && make -j$(nproc) \n' \
-        > build-all.sh
-RUN chmod +x build-all.sh
-RUN mkdir /build
+WORKDIR /build
+COPY . .
+
+# 编译服务端和地图缝合器
+RUN cmake -S . -B build-server \
+    -DCLIENT=OFF \
+    -DWEBSOCKETS=OFF \
+    -DMYSQL=OFF \
+    -DPREFER_BUNDLED_LIBS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build-server --config Release --target game-server music_map_patcher -- -j$(nproc)
+
+# ==================== 阶段 2: 运行时 ====================
+FROM ubuntu:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    ffmpeg \
+    libcurl4t64 \
+    libfreetype6 \
+    libopus0 \
+    libopusfile0 \
+    libsdl2-2.0-0 \
+    libsqlite3-0 \
+    libssl3t64 \
+    libwavpack1 \
+    libzstd1 \
+    ca-certificates \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 编译产物
+COPY --from=builder /build/build-server/DDNet-Server .
+COPY --from=builder /build/build-server/music_map_patcher .
+
+# Python 依赖
+COPY requirements.txt .
+RUN pip install --no-cache-dir --break-system-packages -r requirements.txt audioop-lts
+
+# 后端脚本
+COPY mds.py admin_panel.py qqbot_bridge.py music_stats.py .
+COPY mds_aliyun.py turtle_soup.py undercover_game.py .
+COPY admin_web/ admin_web/
+COPY data/ data/
+
+# 配置模板
+COPY storage.cfg .
+COPY .env.example myServerconfig.example.cfg .
+
+# 运行时目录
+RUN mkdir -p data/musicso/covers data/musico/prepared_maps data/webmaps
+
+# 入口脚本
+COPY docker-entrypoint.sh .
+RUN chmod +x docker-entrypoint.sh
+
+EXPOSE 8303/udp
+
+ENTRYPOINT ["./docker-entrypoint.sh"]

@@ -22,5 +22,4 @@ src/android/
 src/macos/
 src/steam/
 src/tools/
-Dockerfile
 docker-compose*.yml
