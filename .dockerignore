@@ -1,0 +1,17 @@
+build-server/
+build-*/
+.venv/
+.git/
+.github/
+.gitlab-ci.yml
+*.md
+.env
+myServerconfig.cfg
+data/musicso/
+data/musico/prepared_maps/
+data/webmaps/
+data/musico/*.sqlite3
+src/android/
+src/macos/
+src/steam/
+docker-compose*.yml

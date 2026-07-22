@@ -169,6 +169,11 @@ def server_state_snapshot():
         }
 
 
+def _is_server_online():
+    state = server_state_snapshot()
+    return bool(state["updated_at"] and time.time() - state["updated_at"] <= 15)
+
+
 def format_server_status():
     state = server_state_snapshot()
     if not state["updated_at"] or time.time() - state["updated_at"] > 15:
@@ -1018,6 +1023,7 @@ def api_health():
         "s3_ready": CONFIG.s3_ready(),
         "download_dir": str(CONFIG.download_dir.resolve()),
         "origin_maps_dir": str(CONFIG.origin_maps_dir.resolve()),
+        "server_online": _is_server_online(),
         "prepared_maps_dir": str(CONFIG.prepared_maps_dir.resolve()),
         "webmaps_base_path": str(CONFIG.webmaps_base_path.resolve()),
         "map_patcher": map_patcher_binary(),

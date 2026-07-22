@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: bauplayermusic-backend:latest
+    container_name: bpmusic-backend
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./data/musicso:/app/data/musicso
+      - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
+      - ./data/webmaps:/app/data/webmaps
+      - ./data/ddnet:/root/.local/share/ddnet
+      - ./netease_cookies.json:/app/netease_cookies.json
+      - ./.env:/app/.env.host:ro
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:5000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: bauplayermusic-server:latest
+    container_name: bpmusic-server
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./data/musico:/app/data/musico
+      - ./data/musicso:/app/data/musicso
+      - ./data/musico/prepared_maps:/app/data/musico/prepared_maps
+      - ./data/ddnet:/root/.local/share/ddnet
+      - ./myServerconfig.cfg:/app/myServerconfig.cfg.host:ro
+    environment:
+      - TZ=Asia/Shanghai
+      - ASAN_OPTIONS=halt_on_error=0:detect_leaks=0:log_path=/tmp/asan
