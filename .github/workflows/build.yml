@@ -1,0 +1,126 @@
+name: Build server
+
+on:
+  push:
+    branches-ignore:
+      - gh-readonly-queue/**
+  pull_request:
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+jobs:
+  build-server:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: Linux
+          artifact-suffix: linux-x86_64
+          executable-suffix: ''
+          os: ubuntu-latest
+          output-dir: build
+          warning-arg: -DCMAKE_CXX_FLAGS=-Werror
+        - name: macOS
+          artifact-suffix: macos-arm64
+          executable-suffix: ''
+          os: macos-latest
+          output-dir: build
+          warning-arg: -DCMAKE_CXX_FLAGS=-Werror
+        - name: Windows
+          artifact-suffix: windows-x86_64
+          executable-suffix: .exe
+          os: windows-latest
+          output-dir: build/Release
+          warning-arg: ''
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-bin: false
+
+    - name: Remove conflicting Command Line Tools headers
+      if: runner.os == 'macOS'
+      run: sudo rm -rf /Library/Developer/CommandLineTools
+
+    - name: Configure server
+      run: >-
+        cmake -S . -B build
+        -DCLIENT=OFF
+        ${{ matrix.warning-arg }}
+        -DSERVER=ON
+        -DTOOLS=ON
+        -DDOWNLOAD_GTEST=OFF
+        -DDEV=ON
+        -DMYSQL=OFF
+        -DWEBSOCKETS=OFF
+        -DPREFER_BUNDLED_LIBS=ON
+        -DCMAKE_BUILD_TYPE=Release
+        -Werror=dev
+
+    - name: Build server
+      run: cmake --build build --config Release --target game-server --parallel
+
+    - name: Prepare server artifact
+      shell: pwsh
+      run: |
+        $outputDir = Join-Path $env:GITHUB_WORKSPACE '${{ matrix.output-dir }}'
+        $artifactDir = Join-Path $env:GITHUB_WORKSPACE 'artifacts/BauPlayerMusic-${{ matrix.artifact-suffix }}'
+        New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+
+        $runtimeItems = @(
+          'DDNet-Server${{ matrix.executable-suffix }}',
+          'music_map_patcher${{ matrix.executable-suffix }}',
+          'mds.py',
+          'mds_aliyun.py',
+          'admin_panel.py',
+          'admin_web',
+          'qqbot_bridge.py',
+          'music_stats.py',
+          'turtle_soup.py',
+          'undercover_game.py',
+          'requirements.txt',
+          'requirements-aliyun.txt',
+          '.env.example',
+          'myServerconfig.example.cfg',
+          'start_bpmusic_windows.ps1',
+          'start_bpmusic_windows.cmd',
+          'start_admin_panel.ps1',
+          'start_admin_panel.cmd',
+          'data'
+        )
+        foreach($item in $runtimeItems) {
+          $source = Join-Path $outputDir $item
+          if(!(Test-Path -LiteralPath $source)) {
+            throw "Missing server artifact item: $source"
+          }
+          Copy-Item -LiteralPath $source -Destination $artifactDir -Recurse -Force
+        }
+
+        Copy-Item -LiteralPath storage.cfg, license.txt, README.md -Destination $artifactDir -Force
+        Get-ChildItem -Path build -File | Where-Object Extension -In '.dll', '.so', '.dylib' |
+          Copy-Item -Destination $artifactDir -Force
+
+    - name: Upload server artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BauPlayerMusic-${{ matrix.artifact-suffix }}
+        path: artifacts/BauPlayerMusic-${{ matrix.artifact-suffix }}
+        include-hidden-files: true
+        if-no-files-found: error
+        retention-days: 14

@@ -304,6 +304,14 @@ def backend_health(values: dict[str, str] | None = None) -> tuple[bool, Any]:
     return http_json(f"http://{host}:{port}/health")
 
 
+def server_health_check() -> bool:
+    """Check if DDNet server is online via backend health endpoint."""
+    ok, data = backend_health()
+    if not ok or not isinstance(data, dict):
+        return False
+    return bool(data.get("server_online"))
+
+
 def tcp_check(host: str, port: int, timeout: float = 2.0) -> tuple[bool, str]:
     try:
         with socket.create_connection((host, port), timeout=timeout):
@@ -382,7 +390,7 @@ class ProcessManager:
         if detect_external and name == "backend":
             external = backend_health()[0]
         elif detect_external and name == "server":
-            external = process_image_running("DDNet-Server.exe")
+            external = server_health_check()
         return {
             "running": bool(pid or external),
             "managed": bool(pid),

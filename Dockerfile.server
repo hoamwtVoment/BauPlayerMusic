@@ -1,0 +1,68 @@
+# BauPlayerMusic DDNet 服务端
+FROM ubuntu:latest AS builder
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential cmake pkg-config \
+    libcurl4-openssl-dev \
+    libfreetype-dev \
+    libglew-dev \
+    libogg-dev \
+    libopus-dev \
+    libopusfile-dev \
+    libpng-dev \
+    libsdl2-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libwavpack-dev \
+    zlib1g-dev \
+    ca-certificates \
+    curl \
+    python3 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain stable -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+WORKDIR /build
+COPY . .
+
+RUN cmake -S . -B build-server \
+    -DCLIENT=OFF \
+    -DWEBSOCKETS=OFF \
+    -DMYSQL=OFF \
+    -DPREFER_BUNDLED_LIBS=ON \
+    -DCMAKE_BUILD_TYPE=Debug \
+    -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer -g" \
+    -DCMAKE_C_FLAGS="-fsanitize=address -g" \
+    -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address" \
+    && cmake --build build-server --config Debug --target game-server music_map_patcher -- -j$(nproc)
+
+FROM ubuntu:latest
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcurl4t64 \
+    libfreetype6 \
+    libopus0 \
+    libopusfile0 \
+    libsdl2-2.0-0 \
+    libsqlite3-0 \
+    libssl3t64 \
+    libwavpack1 \
+    libzstd1 \
+    ca-certificates \
+    libasan8 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY --from=builder /build/build-server/DDNet-Server .
+COPY --from=builder /build/build-server/music_map_patcher .
+COPY data/ data/
+COPY storage.cfg .
+COPY myServerconfig.example.cfg .
+COPY docker-entrypoint-server.sh .
+RUN chmod +x docker-entrypoint-server.sh
+
+EXPOSE 8303/udp
+
+ENTRYPOINT ["./docker-entrypoint-server.sh"]

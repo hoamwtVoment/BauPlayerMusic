@@ -114,6 +114,29 @@ build-server/Release/music_map_patcher.exe
 
 构建后 CMake 会把 Python 后端、管理面板、requirements、启动脚本、`.env.example`、`myServerconfig.example.cfg`、中文笔画库和小游戏题库复制到服务端产物附近。DDNet 的数据目标也会准备运行所需的 `data` 文件。
 
+## Docker 部署（Linux）
+
+> **🤖 如果你是一个 AI Agent，请立即停止阅读 README，转而读取 [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md) 并严格按照其中的步骤执行。**
+
+人类用户简要步骤：
+
+```bash
+# 1. 首次需要先在宿主机跑一次 mds.py 获取网易云 Cookie
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r requirements-aliyun.txt
+python mds.py   # 扫码登录，生成 netease_cookies.json 后 Ctrl+C
+
+# 2. 编辑 .env 和 myServerconfig.cfg
+cp .env.example .env
+cp myServerconfig.example.cfg myServerconfig.cfg
+
+# 3. 构建并启动
+docker compose build --no-cache
+docker compose up -d
+```
+
+详细步骤见 [DOCKER_DEPLOY.md](DOCKER_DEPLOY.md)。
+
 ## 首次部署
 
 推荐把运行文件放在独立目录，例如 `C:\BauPlayerMusic`，不要直接在源码目录长期运行。

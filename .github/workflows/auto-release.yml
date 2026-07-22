@@ -1,0 +1,161 @@
+name: Auto Release
+
+on:
+  workflow_run:
+    workflows:
+      - Build server
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: auto-release-${{ github.event.workflow_run.head_sha || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  auto-release:
+    name: Publish server packages
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Resolve target build
+      id: target
+      env:
+        EVENT_NAME: ${{ github.event_name }}
+        WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+        WORKFLOW_SHA: ${{ github.event.workflow_run.head_sha }}
+        WORKFLOW_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        CURRENT_SHA: ${{ github.sha }}
+        CURRENT_BRANCH: ${{ github.ref_name }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+
+        if [ "$EVENT_NAME" = "workflow_run" ]; then
+          SHA="$WORKFLOW_SHA"
+          BRANCH="$WORKFLOW_BRANCH"
+          BUILD_RUN_ID="$WORKFLOW_RUN_ID"
+        else
+          SHA="$CURRENT_SHA"
+          BRANCH="$CURRENT_BRANCH"
+          BUILD_RUN_ID="$(
+            gh run list \
+              --repo "$REPO" \
+              --workflow build.yml \
+              --commit "$SHA" \
+              --status success \
+              --limit 1 \
+              --json databaseId \
+              --jq '.[0].databaseId // empty'
+          )"
+          if [ -z "$BUILD_RUN_ID" ]; then
+            echo "No successful Build server run found for commit $SHA."
+            exit 1
+          fi
+        fi
+
+        echo "sha=$SHA" >> "$GITHUB_OUTPUT"
+        echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+        echo "build-run-id=$BUILD_RUN_ID" >> "$GITHUB_OUTPUT"
+
+    - name: Checkout target commit
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ steps.target.outputs.sha }}
+
+    - name: Download server artifacts
+      env:
+        BUILD_RUN_ID: ${{ steps.target.outputs.build-run-id }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        mkdir -p release-assets/raw release-assets/files
+        gh run download "$BUILD_RUN_ID" --repo "$REPO" --dir release-assets/raw
+        find release-assets/raw -mindepth 1 -maxdepth 3 -print
+
+    - name: Package release assets
+      id: package
+      env:
+        SHA: ${{ steps.target.outputs.sha }}
+      run: |
+        set -euo pipefail
+
+        VERSION_HEADER="src/game/version.h"
+        if [ ! -f "$VERSION_HEADER" ]; then
+          echo "Version header not found: $VERSION_HEADER"
+          exit 1
+        fi
+
+        VERSION="$(
+          sed -nE 's/^[[:space:]]*#define[[:space:]]+GAME_RELEASE_VERSION_INTERNAL[[:space:]]+([^[:space:]]+).*/\1/p' "$VERSION_HEADER" | head -n 1
+        )"
+        if [ -z "$VERSION" ]; then
+          echo "GAME_RELEASE_VERSION_INTERNAL was not found in $VERSION_HEADER"
+          exit 1
+        fi
+
+        for PLATFORM in linux-x86_64 macos-arm64; do
+          ARTIFACT_DIR="release-assets/raw/BauPlayerMusic-$PLATFORM"
+          if [ ! -d "$ARTIFACT_DIR" ]; then
+            echo "Missing artifact directory: $ARTIFACT_DIR"
+            exit 1
+          fi
+          tar -C "$ARTIFACT_DIR" -cJf "release-assets/files/BauPlayerMusic-$VERSION-$PLATFORM.tar.xz" .
+        done
+
+        WINDOWS_DIR="release-assets/raw/BauPlayerMusic-windows-x86_64"
+        if [ ! -d "$WINDOWS_DIR" ]; then
+          echo "Missing artifact directory: $WINDOWS_DIR"
+          exit 1
+        fi
+        (
+          cd "$WINDOWS_DIR"
+          zip -qr "$GITHUB_WORKSPACE/release-assets/files/BauPlayerMusic-$VERSION-windows-x86_64.zip" .
+        )
+
+        git archive --format=tar --prefix="BauPlayerMusic-$VERSION/" "$SHA" |
+          xz -9 -c > "release-assets/files/BauPlayerMusic-$VERSION-source.tar.xz"
+
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+        find release-assets/files -type f -print
+
+    - name: Create GitHub Release
+      env:
+        BRANCH: ${{ steps.target.outputs.branch }}
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+        SHA: ${{ steps.target.outputs.sha }}
+        VERSION: ${{ steps.package.outputs.version }}
+      run: |
+        set -euo pipefail
+
+        TAG="bauplayermusic-$VERSION-${SHA:0:12}"
+        TITLE="BauPlayerMusic $VERSION (${SHA:0:12})"
+
+        cat > release-notes.md <<EOF
+        Automatic server release for commit \`$SHA\` on branch \`$BRANCH\`.
+
+        The Linux, macOS and Windows server builds completed successfully.
+        EOF
+
+        if gh release view "$TAG" --repo "$REPO" >/dev/null 2>&1; then
+          gh release upload "$TAG" release-assets/files/* --repo "$REPO" --clobber
+        else
+          gh release create "$TAG" release-assets/files/* \
+            --repo "$REPO" \
+            --target "$SHA" \
+            --title "$TITLE" \
+            --notes-file release-notes.md \
+            --latest
+        fi
