@@ -1551,6 +1551,7 @@ set(EXPECTED_DATA
   maps/Tsunami.map
   maps/Tutorial.map
   maps/a.map
+  maps/a_new_version.map
   maps/coverage.map
   maps/ctf1.map
   maps/ctf2.map
@@ -1580,6 +1581,7 @@ set(EXPECTED_DATA
   musico/turtle_soup_cases.json
   musico/undercover_words.txt
   originmaps/a.map
+  originmaps/a_new_version.map
   particles.png
   race_flag.png
   shader/pipeline.frag
