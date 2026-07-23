@@ -1581,6 +1581,7 @@ set(EXPECTED_DATA
   musico/turtle_soup_cases.json
   musico/undercover_words.txt
   originmaps/a.map
+  originmaps/a_new_version.map
   particles.png
   race_flag.png
   shader/pipeline.frag
